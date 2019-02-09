@@ -5,27 +5,20 @@
     <title>Hello World!</title>
     <link rel="stylesheet" type="text/css" href="../css/bootstrap.min.css">
     <link rel="stylesheet" type="text/css" href="../slickgrid/slick.grid.css">
-	<link rel="stylesheet" type="text/css" href="../slickgrid/css/smoothness/jquery-ui-1.11.3.custom.css">
-	<link rel="stylesheet" type="text/css" href="../slickgrid/examples/examples.css">
+		<link rel="stylesheet" type="text/css" href="../slickgrid/css/smoothness/jquery-ui-1.11.3.custom.css">
+		<link rel="stylesheet" type="text/css" href="../slickgrid/examples/examples.css">
+		<link rel="stylesheet" type="text/css" href="../css/grid.css">
   </head>
   <body>
-    <h1>Hello World!</h1>
 
-		<table width="100%">
-			<tr>
-				<td valign="top" width="100%">
-					<div id="myGrid" style="width:100%;height:500px;"></div>
-				</td>
-			</tr>
+		<div id="myGrid"></div>
 
     <script>
     jQuery = window.$ = window.jQuery = require('jquery');
-    require('../../renderer.js')
-    
+		require('../../renderer.js');
+		const {ipcRenderer} = require('electron');
     </script>
 
-    
-    
 
 	<script src="../js/bootstrap.min.js"> </script>
 	<script src="../slickgrid/lib/jquery-ui-1.11.3.min.js"></script>
@@ -40,68 +33,75 @@
 	<script src="../slickgrid/slick.editors.js"></script>
 	<script src="../slickgrid/slick.grid.js"></script>
 
-    <script>
-			var grid;
-			var columns = [
-				{id: "id", name: "id", field: "id"},
-				{id: "A", name: "A", field: "A", editor: Slick.Editors.LongText},
-				{id: "B", name: "B", field: "B", editor: Slick.Editors.LongText},
-				{id: "C", name: "C", field: "C", editor: Slick.Editors.LongText},
-				{id: "D", name: "D", field: "D", editor: Slick.Editors.LongText},
-				{id: "E", name: "E", field: "E", editor: Slick.Editors.LongText},
-				{id: "F", name: "F", field: "F", editor: Slick.Editors.LongText},
-				{id: "G", name: "G", field: "G", editor: Slick.Editors.LongText},
-				{id: "H", name: "H", field: "H"},
-				{id: "I", name: "I", field: "I"},
-				{id: "J", name: "J", field: "J"},
-				{id: "K", name: "K", field: "K"},
-				{id: "L", name: "L", field: "L"},
-				{id: "M", name: "M", field: "M"},
-				{id: "N", name: "N", field: "N"},
-				{id: "O", name: "O", field: "O"},
-				{id: "P", name: "P", field: "P"},
-				{id: "Q", name: "Q", field: "Q"},
-				{id: "R", name: "R", field: "R"},
-				{id: "S", name: "S", field: "S"},
-				{id: "T", name: "T", field: "T"}
-			];
-			var options = {
-				editable: true,
-    			enableAddRow: true,
-				enableCellNavigation: true,
-				enableColumnReorder: true,
-    			asyncEditorLoading: false,
-    			autoEdit: false
-			};
-			$(function () {
-				var data = [];
-				for (var i = 0; i < 20000000; i++) {
-					data[i] = {
-						id: i,
-						A: i,
-						B: i,
-						C: i,
-						D: i,
-						E: i,
-						F: i,
-						G: i,
-						H: i,
-						I: i,
-						J: i,
-						K: i,
-						L: i,
-						M: i,
-						N: i,
-						O: i,
-						P: i,
-						Q: i,
-						R: i,
-						S: i,
-						T: i
-					};
-				}
-				grid = new Slick.Grid("#myGrid", data, columns, options);
-			})
-		</script>
+	<script src="../js/util_render.js"></script>
+
+  <script>
+	var start_time = new Date();
+	var grid;
+	var COL_COUNT = 20;
+
+	var columns = [
+		{id: "id", name: "id", field: "id"}
+	];
+
+	function initGrid(){
+		var index = 0;
+
+		for(index = 0; index < COL_COUNT; index++){
+			var colname = getColName(index+1)
+			var item = {id: colname, name: colname, field: colname, editor: Slick.Editors.LongText};
+			columns.push(item);
+		}
+
+		var options = {
+			editable: true,
+			enableAddRow: true,
+			enableCellNavigation: true,
+			enableColumnReorder: true,
+			asyncEditorLoading: false,
+			autoEdit: false,
+			editCommandHandler: queueAndExecuteCommand
+		};
+
+		var data = [];
+		for (var i = 0; i < 1000000; i++) {
+			var item = {id: i};
+			for(index = 0; index < COL_COUNT; index++){
+				var colname = getColName(index+1)
+				item[colname] = i;
+			}
+			data.push(item);
+		}
+		var spend_time = ((new Date)-start_time) / 1000;
+		console.log("data ready : " + spend_time);
+		grid = new Slick.Grid("#myGrid", data, columns, options);
+		spend_time = ((new Date)-start_time) / 1000;
+		console.log("grid : " + spend_time);
+	}
+		
+	
+	var commandQueue = [];
+	function queueAndExecuteCommand(item, column, editCommand) {
+		commandQueue.push(editCommand);
+		editCommand.execute();
+	}
+
+	function undo() {
+		var command = commandQueue.pop();
+		if (command && Slick.GlobalEditorLock.cancelCurrentEdit()) {
+			command.undo();
+			grid.gotoCell(command.row, command.cell, false);
+		}
+	}
+	
+	$(function(){
+		initGrid();
+	});
+	
+	ipcRenderer.on('api', (event, data) => {
+      apiReceiver(data);
+    })
+	
+	</script>
   </body>
 </html>

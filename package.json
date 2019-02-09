@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "bootstrap": "^4.2.1",
+    "event-stream": "^4.0.1",
     "slickgrid": "^2.4.2",
     "sqlite3": "^4.0.6"
   }
