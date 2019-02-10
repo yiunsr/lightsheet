@@ -1,7 +1,8 @@
-// http://cwestblog.com/2013/09/05/javascript-snippet-convert-number-to-column-name/
 var fs = require('fs');
 var es = require('event-stream');
 
+
+// http://cwestblog.com/2013/09/05/javascript-snippet-convert-number-to-column-name/
 var __colNameList = [];
 var __maxColCount = 1024;
 function _prepareColName(){
@@ -22,7 +23,7 @@ function getColName(num) {
 
 function getColInfos(col_count){
   var columns = [
-		{id: "id", name: "id", field: "id"}
+		{id: "id", name: "id", field: "id", cssClass: "grid-row-hader", selectable: false}
 	];
   for(index = 0; index < col_count; index++){
     var colname = getColName(index+1)
@@ -46,12 +47,19 @@ function apiReceiver(data){
 
 }
 
+var __loading_time;
 function loadFile(action, param){
   var filepath = param["filepath"];
+  __loading_time = new Date();
   
   var curLine = 0;
   var totalLine = 0;
   var rowdata = [];
+
+  loadingModal("start", "loading file ...", "count line");
+
+  // grid를 초기화 해서 저장된 데이터를 지우도록 유도한다. 
+  grid.setData([]);
 
   var s = fs
     .createReadStream(filepath)
@@ -61,6 +69,8 @@ function loadFile(action, param){
         totalLine++;
       })
     .on('end', function() {
+      var spend_time = ((new Date)-__loading_time) / 1000;
+	    console.log("_readFile count line done : " + spend_time);
       _readFile(filepath, totalLine);
       }),
     );
@@ -69,8 +79,10 @@ function loadFile(action, param){
 
 function _readFile(filepath, totalLine){
   var curLine = 0;
-  var rowdata = [];
+  // var rowdata = [];
+  var rowdata = new Array(totalLine);
   var lastPercent = 0;
+
 
   console.log('loadFileData start');
   var s = fs
@@ -80,7 +92,7 @@ function _readFile(filepath, totalLine){
       es
         .mapSync(function(line) {
           if(curLine == 0){
-            var data = {api: "loadFileData", action: "start", param: {}}
+            // var data = {api: "loadFileData", action: "start", param: {}}
             // sendRenderAPI(data);
           }
           curLine++;
@@ -89,6 +101,7 @@ function _readFile(filepath, totalLine){
             var data = {api: "loadFileData", action: "percent", param: {percent:curPercent}}
             console.log("loadFileData percent : " + curPercent + "%" );
             // sendRenderAPI(data);
+            loadingModal(curPercent, "loading file ...");
           }
           
           lastPercent = curPercent
@@ -102,7 +115,8 @@ function _readFile(filepath, totalLine){
             rowItem[colname] = items[index];
           }
           
-          rowdata.push(rowItem);
+          // rowdata.push(rowItem);
+          rowdata[curLine - 1] = rowItem;
         })
         .on('error', function(err) {
           console.log('Error while reading file.', err);
@@ -110,9 +124,14 @@ function _readFile(filepath, totalLine){
         .on('end', function() {
           console.log('loadFileData end');
 
+          var spend_time = ((new Date)-__loading_time) / 1000;
+	        console.log("_readFile prepare data done: " + spend_time);
+
           var data = {api: "loadFileData", action: "end", param: {rowdata:rowdata}}
           // sendRenderAPI(data);
           loadGrid(rowdata);
+          loadingModal("end");
+          console.log("_readFile end: " + spend_time);
         }),
     );
 

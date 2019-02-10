@@ -8,10 +8,48 @@
 		<link rel="stylesheet" type="text/css" href="../slickgrid/css/smoothness/jquery-ui-1.11.3.custom.css">
 		<link rel="stylesheet" type="text/css" href="../slickgrid/examples/examples.css">
 		<link rel="stylesheet" type="text/css" href="../css/grid.css">
+		<style>
+		html, body{font-size: 15px; }
+		.grid-row-hader{
+			border-right-color: silver;
+      border-right-style: solid;
+      background: #f5f5f5;
+      color: gray;
+      text-align: right;
+      font-size: 10px;
+		}
+		</style>
   </head>
   <body>
 
 		<div id="myGrid"></div>
+
+		<!-- Modal -->
+		<div class="modal fade" id="loadingModal" data-backdrop="static" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+			<div class="modal-dialog" role="document">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title" id="loadingModalTitle">Loading ... </h5>
+					</div>
+					<div class="modal-body">
+						<div class="progress">
+							<div id="loadingModalPercent" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%">
+							  0%
+							</div>
+						</div>
+						<div class="row mt-2">
+							<H4 class="col" id="loadingModalBody">
+								loading
+							</H4>
+						</div>
+					</div>
+					<div class="modal-footer">
+					</div>
+				</div>
+			</div>
+		</div>
+
+		
 
     <script>
     jQuery = window.$ = window.jQuery = require('jquery');
@@ -34,6 +72,7 @@
 	<script src="../slickgrid/slick.grid.js"></script>
 
 	<script src="../js/util_render.js"></script>
+	<script src="../js/util_ui.js"></script>
 
   <script>
 	var start_time = new Date();
@@ -47,11 +86,7 @@
 	function initGrid(){
 		var index = 0;
 
-		for(index = 0; index < COL_COUNT; index++){
-			var colname = getColName(index+1)
-			var item = {id: colname, name: colname, field: colname, editor: Slick.Editors.LongText};
-			columns.push(item);
-		}
+		columns = getColInfos(COL_COUNT);
 
 		var options = {
 			editable: true,
@@ -64,7 +99,7 @@
 		};
 
 		var data = [];
-		for (var i = 0; i < 1000000; i++) {
+		for (var i = 0; i < 100000; i++) {
 			var item = {id: i};
 			for(index = 0; index < COL_COUNT; index++){
 				var colname = getColName(index+1)
