@@ -33,13 +33,20 @@ function getColInfos(col_count){
   return columns;
 }
 
+// https://davidwalsh.name/query-string-javascript
+function getUrlParam(name) {
+  name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+  var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+  var results = regex.exec(location.search);
+  return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+};
+
 function apiReceiver(data){
   var api = data["api"];
   var action = data["action"];
   var param = data["param"]
 
   switch(api){
-    case "loadFileData": loadFileData(action, param);break;
     case "loadFile": loadFile(action, param);break;
     default:break;
   }
@@ -47,8 +54,7 @@ function apiReceiver(data){
 }
 
 var __loading_time;
-function loadFile(action, param){
-  var filepath = param["filepath"];
+function loadFile(filepath){
   __loading_time = new Date();
   
   var curLine = 0;
@@ -78,21 +84,20 @@ function _readFile(filepath, totalLine){
   var rowdata = new Array(totalLine);
   var lastPercent = 0;
 
-  console.log('loadFileData start');
+  console.log('_readFile start');
 
   var instream = fs.createReadStream(filepath);
   var outstream = new stream;
   readline.createInterface(instream, outstream)
     .on('line', function(line) {
       if(curLine == 0){
-        // var data = {api: "loadFileData", action: "start", param: {}}
-        // sendRenderAPI(data);
+        
       }
       curLine++;
       var curPercent = parseInt(curLine / totalLine * 100);
       if(lastPercent != curPercent){
-        var data = {api: "loadFileData", action: "percent", param: {percent:curPercent}}
-        console.log("loadFileData percent : " + curPercent + "%" );
+        var data = {api: "_readFile", action: "percent", param: {percent:curPercent}}
+        console.log("_readFile percent : " + curPercent + "%" );
         // sendRenderAPI(data);
         loadingModal(curPercent, "loading file ...");
       }
@@ -115,12 +120,11 @@ function _readFile(filepath, totalLine){
       console.log('Error while reading file.', err);
     })
     .on('close', function() {
-      console.log('loadFileData end');
+      console.log('_readFile end');
 
       var spend_time = ((new Date)-__loading_time) / 1000;
       console.log("_readFile prepare data done: " + spend_time);
 
-      var data = {api: "loadFileData", action: "end", param: {rowdata:rowdata}}
       // sendRenderAPI(data);
       loadGrid(rowdata);
       loadingModal("end");
@@ -131,24 +135,39 @@ function _readFile(filepath, totalLine){
 }
 
 
-function loadFileData(action, param){
-  if(action == "start"){
-    console.log("loadFileData start");
-    return;
-  }
-  else if(action == "percent"){
-    var percent = param["percent"];
-    console.log("loadFileData process : " + percent + "%");
-    return;
-  }
-  
+function loadGrid(gridData){
+  var col_count = Object.keys(gridData[0]).length;
+
+  var columns = getColInfos(col_count);
+  var options = {
+    editable: true,
+    enableAddRow: true,
+    enableCellNavigation: true,
+    enableColumnReorder: true,
+    asyncEditorLoading: false,
+    autoEdit: false,
+    editCommandHandler: queueAndExecuteCommand
+  };
+
+  grid = new Slick.Grid("#myGrid", gridData, columns, options);
 }
 
-function loadGrid(gridData){
-  var col_count = Object.keys(gridData[0]).length - 1;
+function initGrid(){
+  var filepath = getUrlParam("filepath");
+  loadFile(filepath);
+}
+  
 
-  var colInfos = getColInfos(col_count);
-  grid.setColumns(colInfos);
-  grid.setData(gridData);
-  grid.render();
+var commandQueue = [];
+function queueAndExecuteCommand(item, column, editCommand) {
+  commandQueue.push(editCommand);
+  editCommand.execute();
+}
+
+function undo() {
+  var command = commandQueue.pop();
+  if (command && Slick.GlobalEditorLock.cancelCurrentEdit()) {
+    command.undo();
+    grid.gotoCell(command.row, command.cell, false);
+  }
 }

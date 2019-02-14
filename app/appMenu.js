@@ -1,4 +1,6 @@
 const { app, Menu, dialog, ipcMain } = require('electron')
+resolve = require('path').resolve
+
 const utils = require('./utils.js')
 
 var mainWindow;
@@ -12,8 +14,13 @@ const template = [
               click () { 
                   dialog.showOpenDialog({properties: ['openFile']}, function (filepaths) {
                       if (filepaths !== undefined) {
-                        var data = {api: "loadFile", action: "end", param: {filepath:filepaths[0]}}
-                        utils.sendRenderAPI(data);
+                        // var data = {api: "loadFile", action: "end", param: {filepath:filepaths[0]}}
+                        // utils.sendRenderAPI(data);
+                        var url = `${__dirname}/../assets/html/grid.html`;
+                        url = resolve(url);
+                        url += `?filepath=` + encodeURIComponent(filepaths[0]);
+
+                        global.mainWindow.loadURL('file://' + url);
                       }
                   });
               }
