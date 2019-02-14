@@ -86,13 +86,12 @@ function _readFile(filepath, totalLine){
 
   console.log('_readFile start');
 
+  GridDB.initDB();
+
   var instream = fs.createReadStream(filepath);
   var outstream = new stream;
   readline.createInterface(instream, outstream)
     .on('line', function(line) {
-      if(curLine == 0){
-        
-      }
       curLine++;
       var curPercent = parseInt(curLine / totalLine * 100);
       if(lastPercent != curPercent){
@@ -113,8 +112,12 @@ function _readFile(filepath, totalLine){
         rowItem[colname] = items[index];
       }
       
-      // rowdata.push(rowItem);
+      if(curLine == 1){
+        var colInfo = getColInfos(colcount);
+        GridDB.createColInfo(colInfo, colcount);
+      }
       rowdata[curLine - 1] = rowItem;
+      GridDB.insertRows([rowItem]);
     })
     .on('error', function(err) {
       console.log('Error while reading file.', err);

@@ -4,7 +4,9 @@
   "description": "Simple csv cell viewer",
   "main": "app/main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "rebuild": "electron-rebuild -f -w leveldown",
+    "electron-rebuild": "electron-rebuild"
   },
   "repository": "https://github.com/electron/electron-quick-start",
   "keywords": [
@@ -14,13 +16,13 @@
   "author": "GitHub",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^4.0.3"
+    "electron": "^4.0.3",
+    "electron-rebuild": "^1.8.4"
   },
   "dependencies": {
     "bootstrap": "^4.2.1",
     "leveldown": "^4.0.1",
     "levelup": "^4.0.0",
-    "slickgrid": "^2.4.2",
-    "sqlite3": "^4.0.6"
+    "slickgrid": "^2.4.2"
   }
 }
