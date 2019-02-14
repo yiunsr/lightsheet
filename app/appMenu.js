@@ -12,7 +12,6 @@ const template = [
               click () { 
                   dialog.showOpenDialog({properties: ['openFile']}, function (filepaths) {
                       if (filepaths !== undefined) {
-                        // utils.readFileData(filepaths[0]);
                         var data = {api: "loadFile", action: "end", param: {filepath:filepaths[0]}}
                         utils.sendRenderAPI(data);
                       }
