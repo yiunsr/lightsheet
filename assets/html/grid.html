@@ -6,6 +6,8 @@
     <link rel="stylesheet" type="text/css" href="../css/bootstrap.min.css">
     <link rel="stylesheet" type="text/css" href="../slickgrid/slick.grid.css">
 		<link rel="stylesheet" type="text/css" href="../slickgrid/css/smoothness/jquery-ui-1.11.3.custom.css">
+		<link rel="stylesheet" type="text/css" href="../slickgrid/plugins/slick.headermenu.css">
+		<link rel="stylesheet" type="text/css" href="../slickgrid/controls/slick.columnpicker.css">
 		<link rel="stylesheet" type="text/css" href="../slickgrid/examples/examples.css">
 		<link rel="stylesheet" type="text/css" href="../css/grid.css">
 		<style>
@@ -18,13 +20,14 @@
       text-align: right;
       font-size: 10px;
 		}
+
 		</style>
   </head>
   <body onbeforeunload="destroyAutoResize()">
     <div id="gridContainer">
 		  <div id="myGrid"></div>
 		</div>
-		
+
 		<!-- Modal -->
 		<div class="modal fade" id="loadingModal" data-backdrop="static" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
 			<div class="modal-dialog" role="document">
@@ -66,6 +69,8 @@
 	<script src="../js/remotemodel.js"></script>
 	<script src="../slickgrid/slick.grid.js"></script>
 
+	<script src="../slickgrid/plugins/slick.headermenu.js"></script>
+	<script src="../slickgrid/controls/slick.columnpicker.js"></script>
 	<script src="../slickgrid/plugins/slick.cellrangedecorator.js"></script>
 	<script src="../slickgrid/plugins/slick.cellrangeselector.js"></script>
 	<script src="../slickgrid/plugins/slick.cellselectionmodel.js"></script>

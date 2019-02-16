@@ -22,6 +22,8 @@
   "dependencies": {
     "bootstrap": "^4.2.1",
     "encoding-down": "^6.0.1",
+    "excel-formula": "github:joshbtn/excelFormulaUtilitiesJS",
+    "formulajs": "github:sutoiku/formula.js",
     "leveldown": "^4.0.1",
     "levelup": "^4.0.0",
     "lexicographic-integer": "^1.1.0",

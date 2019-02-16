@@ -1,5 +1,6 @@
 var _grid;
 var _loader;
+var _headerMenuPlugin;
 const BUFFER_SIZE = 10000;
 
 var __loading_time;
@@ -100,10 +101,78 @@ function _readFile(filepath, totalLine){
 }
 
 
+function _initColHeader(columns){
+  for (var i = 0; i < columns.length; i++) {
+    columns[i].header = {
+      menu: {
+        items: [
+          {
+            iconImage: "../images/sort-asc.gif",
+            title: "Sort Ascending",
+            disabled: !columns[i].sortable,
+            command: "sort-asc"
+          },
+          {
+            iconImage: "../images/sort-desc.gif",
+            title: "Sort Descending",
+            disabled: !columns[i].sortable,
+            command: "sort-desc"
+          },
+          {
+            title: "Hide Column",
+            command: "hide",
+            tooltip: "Can't hide this column"
+          },
+          {
+            divider: true,
+            command: ""
+          },
+          {
+            iconCssClass: "icon-help",
+            title: "Help",
+            command: "help"
+          }
+        ]
+      }
+    };
+  }
+
+  return columns;
+}
+
+
+function _initColMenu(grid){
+  _headerMenuPlugin = new Slick.Plugins.HeaderMenu({})
+  _headerMenuPlugin.onCommand.subscribe(function(e, args) {
+    if(args.command === "hide") {
+      // hide column
+      visibleColumns = removeColumnById(visibleColumns, args.column.id);
+      grid.setColumns(visibleColumns);
+      executeSort(grid.getSortColumns());
+    }else if(args.command === "sort-asc" || args.command === "sort-desc") {
+      // sort column asc or desc
+      var isSortedAsc = (args.command === "sort-asc");
+      var sortCols = removeSortColumnById(grid.getSortColumns(), args.column.id);
+      sortCols.push({ sortAsc: isSortedAsc, columnId: args.column.id });
+      grid.setSortColumns(sortCols);
+      executeSort(sortCols);
+    }else {
+      // command not recognised
+      alert("Command: " + args.command);
+    }
+  });
+  grid.registerPlugin(_headerMenuPlugin);
+}
+
 function loadGrid(rowCount, colCount){
 
   var columns = getColInfos(colCount);
+  columns = _initColHeader(columns);
+
   var options = {
+    columnPicker: {
+      columnTitle: "Columns"
+    },
     editable: true,
     enableAddRow: true,
     enableCellNavigation: true,
@@ -115,6 +184,8 @@ function loadGrid(rowCount, colCount){
 
   // https://github.com/6pac/SlickGrid/blob/master/examples/example6-ajax-loading.html
   _loader = new Slick.Data.RemoteModel(rowCount, colCount);
+
+
   // _grid = new Slick.Grid("#myGrid", gridData, columns, options);
   _grid = new Slick.Grid("#myGrid", _loader.data, columns, options);
   _grid.onViewportChanged.subscribe(function (e, args) {
@@ -146,6 +217,10 @@ function loadGrid(rowCount, colCount){
    }, 500);
    _grid.render();
 
+
+   var columnpicker = new Slick.Controls.ColumnPicker(columns, _grid, options);
+   _initColMenu(_grid);
+
   attachAutoResizeDataGrid(_grid, "myGrid", "gridContainer");
 
 }
@@ -169,7 +244,6 @@ function undo() {
     grid.gotoCell(command.row, command.cell, false);
   }
 }
-
 
 
 // define some minimum height/width/padding before resizing
