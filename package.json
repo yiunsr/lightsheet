@@ -24,6 +24,7 @@
     "encoding-down": "^6.0.1",
     "leveldown": "^4.0.1",
     "levelup": "^4.0.0",
+    "lexicographic-integer": "^1.1.0",
     "memdown": "^3.0.0",
     "slickgrid": "^2.4.2"
   }

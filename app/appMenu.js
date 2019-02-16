@@ -66,6 +66,14 @@ const template = [
     ]
   },
   {
+    label: 'Go',
+    submenu: [
+      {label: 'Line..', click: function() {
+        }
+      }
+    ]
+  },
+  {
     role: 'window',
     submenu: [
       { role: 'minimize' },

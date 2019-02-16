@@ -5,7 +5,7 @@ var readline = require('readline')
 
 // http://cwestblog.com/2013/09/05/javascript-snippet-convert-number-to-column-name/
 var __colNameList = [];
-var __maxColCount = 1024;
+var __maxColCount = 16384;
 function _prepareColName(){
   var index = 1;
   for(index = 1; index <= __maxColCount; index++){

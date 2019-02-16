@@ -20,10 +20,11 @@
 		}
 		</style>
   </head>
-  <body>
-
-		<div id="myGrid"></div>
-
+  <body onbeforeunload="destroyAutoResize()">
+    <div id="gridContainer">
+		  <div id="myGrid"></div>
+		</div>
+		
 		<!-- Modal -->
 		<div class="modal fade" id="loadingModal" data-backdrop="static" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
 			<div class="modal-dialog" role="document">
@@ -62,7 +63,7 @@
 	<script src="../slickgrid/lib/jquery-ui-1.11.3.min.js"></script>
   <script src="../slickgrid/lib/jquery.event.drag-2.3.0.js"></script>
 	<script src="../slickgrid/slick.core.js"></script>
-	<script src="../js/slick.remotemodel.custom.js"></script>
+	<script src="../js/remotemodel.js"></script>
 	<script src="../slickgrid/slick.grid.js"></script>
 
 	<script src="../slickgrid/plugins/slick.cellrangedecorator.js"></script>
@@ -92,9 +93,12 @@
 	});
 	
 	ipcRenderer.on('api', (event, data) => {
-      apiReceiver(data);
-    })
+    apiReceiver(data);
+  })
 	
+	function destroyAutoResize() {
+		$(window).trigger('resize').off('resize');
+	}
 	</script>
   </body>
 </html>

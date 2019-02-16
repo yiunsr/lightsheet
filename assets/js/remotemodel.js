@@ -7,7 +7,7 @@
     function RemoteModel(rowCount, colCount) {
       // private
       var PAGESIZE = 50;
-      var data = {length: 0, rowCount:rowCount, colCount:colCount};
+      var data = {length: rowCount, rowCount:rowCount, colCount:colCount};
       var searchstr = "";
       var sortcol = null;
       var sortdir = 1;
@@ -42,8 +42,15 @@
   
       function ensureData(from, to) {
         GridDB.getRowsDict(from, to, function(rowDicts){
-          data = {data, rowDicts};
-          onDataLoaded.notify({from: from, to: to});
+          for (var i = 0; i < Object.keys(rowDicts).length; i++) {
+            var item = rowDicts[i];
+    
+            data[from + i] = item;
+            data[from + i].index = from + i;
+          }
+          // data.length = Object.keys(rowDicts).length;
+          var end = from + Object.keys(rowDicts).length;
+          onDataLoaded.notify({from: from, to: end});
         });
       }
   
