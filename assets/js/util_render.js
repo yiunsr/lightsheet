@@ -22,6 +22,17 @@ function getColName(num) {
   return __colNameList[num-1];
 }
 
+// http://cwestblog.com/2013/09/04/javascript-snippet-parse-a-spreadsheet-address/
+function parseAddress(strCellAddr) {
+  var i = strCellAddr.search(/\d/);
+  var colNum = 0;
+  strCellAddr = +strCellAddr.replace(/\D/g, function(letter) {
+    colNum += (parseInt(letter, 36) - 9) * Math.pow(26, --i);
+    return '';
+  });
+  return [colNum, strCellAddr];
+}
+
 function getColInfos(col_count){
   var columns = [
 		{id: "id", name: "id", field: "id", cssClass: "grid-row-hader", selectable: false}

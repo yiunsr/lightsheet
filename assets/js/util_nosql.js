@@ -69,6 +69,16 @@ GridDB.index2grid = function(index){
   return [rowIndex, colIndex];
 }
 
+GridDB.getByCellName = async function(cellName){
+  var rowNum, colNum;
+  [rowNum, colNum] = parseAddress(cellName);
+  var dbNum = this.grid2index(rowNum, colNum);
+  
+  var value = await this._db.get(dbNum);
+  console.log(value);
+  return value;
+}
+
 GridDB.insertRows = function(rowdatas){
   var row_index = 0;
   var colname = 0;
