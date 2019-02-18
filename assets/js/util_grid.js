@@ -311,3 +311,94 @@ function resizeToFitBrowserWindow(grid, gridId, gridContainerId) {
     }
   }
 }
+
+// https://github.com/joshbtn/excelFormulaUtilitiesJS/blob/fac55f0acc11845b4eca9cef8f738460502196c7/src/ExcelFormulaUtilities.js#L653
+function breakOutRanges(rangeStr, delimStr){
+
+  //Quick Check to see if if rangeStr is a valid range
+  if ( !RegExp("[a-z]+[0-9]+:[a-z]+[0-9]+","gi").test(rangeStr) ){
+      throw "This is not a valid range: " + rangeStr;
+  }
+
+  //Make the rangeStr lowercase to deal with looping.
+  var range = rangeStr.split(":"),
+
+      startRow = parseInt(range[0].match(/[0-9]+/gi)[0]),
+      startCol = range[0].match(/[A-Z]+/gi)[0],
+      startColDec = fromBase26(startCol)
+
+      endRow =  parseInt(range[1].match(/[0-9]+/gi)[0]),
+      endCol = range[1].match(/[A-Z]+/gi)[0],
+      endColDec = fromBase26(endCol),
+
+      // Total rows and cols
+      totalRows = endRow - startRow + 1,
+      totalCols = fromBase26(endCol) - fromBase26(startCol) + 1,
+
+      // Loop vars
+      curCol = 0,
+      curRow = 1 ,
+      curCell = "",
+
+      //Return String
+      retStr = "";
+
+  for(; curRow <= totalRows; curRow+=1){
+      for(; curCol < totalCols; curCol+=1){
+          // Get the current cell id
+          curCell = toBase26(startColDec + curCol) + "" + (startRow+curRow-1) ;
+          retStr += curCell + (curRow===totalRows && curCol===totalCols-1 ? "" : delimStr);
+      }
+      curCol=0;
+  }
+
+  return retStr;
+}
+
+function toBase26(value){
+
+  value = Math.abs(value);
+
+  var converted = ""
+       ,iteration = false
+       ,remainder;
+
+  // Repeatedly divide the numerb by 26 and convert the
+  // remainder into the appropriate letter.
+  do {
+      remainder = value % 26;
+
+      // Compensate for the last letter of the series being corrected on 2 or more iterations.
+      if (iteration && value < 25) {
+          remainder--;
+      }
+
+      converted = String.fromCharCode((remainder + 'A'.charCodeAt(0))) + converted;
+      value = Math.floor((value - remainder) / 26);
+
+      iteration = true;
+  } while (value > 0);
+
+  return converted;
+}
+
+function fromBase26(number) {
+  number = number.toUpperCase();
+
+  var s = 0
+      ,i = 0
+      ,dec = 0;
+
+  if (
+      number !== null
+      && typeof number !== "undefined"
+      && number.length > 0
+  ) {
+      for (; i < number.length; i++) {
+          s = number.charCodeAt(number.length - i - 1) - "A".charCodeAt(0);
+          dec += (Math.pow(26, i)) * (s+1);
+      }
+  }
+
+  return dec - 1;
+}

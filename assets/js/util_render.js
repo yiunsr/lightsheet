@@ -30,7 +30,7 @@ function parseAddress(strCellAddr) {
     colNum += (parseInt(letter, 36) - 9) * Math.pow(26, --i);
     return '';
   });
-  return [colNum, strCellAddr];
+  return [strCellAddr, colNum];
 }
 
 function getColInfos(col_count){
