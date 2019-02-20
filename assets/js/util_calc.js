@@ -39,12 +39,20 @@ Calc.func = function(funName, args){
   return retValue;
 }
 
-Calc.range = function(str_range){
-  var value = this._variable_dict[str_range];
-  console.log("Calc.range : " + str_range + " value : " + value);
-  // var value = GridDB.getByCellName(str_range);
-  // return value;
-  return this._variable_dict[str_range];
+Calc.range = function(arg_range){
+  var value = this._variable_dict[arg_range];
+  console.log("Calc.range : " + arg_range + " value : " + value);
+  if(arg_range[0] == "["){
+    arg_range = arg_range.slice(1,-1);
+    arg_range = arg_range.split(",");
+    var ret_list = [];
+    for(var i=0; i < arg_range.length ; i++ ){
+      var value = arg_range[i];
+      ret_list.push(this._variable_dict[value]);
+    }
+    return ret_list;
+  }
+  return this._variable_dict[arg_range];
 }
 
 Calc.logical = function(str){
@@ -101,7 +109,8 @@ Calc._prepare = async function(str_formula){
 Calc.calc = async function(str_formula){
   this._variable_dict = await this._prepare(str_formula)
   var js_formula = formula.toJavaScript(str_formula, this.options);
-  var ret = eval(js_formula);
+  // var ret = eval(js_formula);
+  var ret = eval.call(this._variable_dict, js_formula);
   return ret;
 }
 

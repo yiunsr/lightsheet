@@ -22,6 +22,9 @@ function getColName(num) {
   return __colNameList[num-1];
 }
 
+function getColNames() {
+  return __colNameList;
+}
 // http://cwestblog.com/2013/09/04/javascript-snippet-parse-a-spreadsheet-address/
 function parseAddress(strCellAddr) {
   var i = strCellAddr.search(/\d/);

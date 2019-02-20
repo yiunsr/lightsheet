@@ -21,28 +21,29 @@ GridDB.getColCount = function(){
   return this._colCount;
 }
 
+GridDB._save_mod = "m"
 
 GridDB.initDB = function (){
-  this._db = levelup(encode(leveldown(DB_PATH), {
+  if(this._save_mod == "m"){
+    this._db = levelup(memdown(), {
     keyEncoding: {
       type: 'lexicographic-integer',
       encode: (n) => lexint.pack(n, 'hex'),
       decode: lexint.unpack,
       buffer: false
-    }
-  },), {compression: true, cacheSize: 32*1024*1024} );
-
-    // this._db = levelup(memdown(), {
-    // keyEncoding: {
-    //   type: 'lexicographic-integer',
-    //   encode: (n) => lexint.pack(n, 'hex'),
-    //   decode: lexint.unpack,
-    //   buffer: false
-    // }, clean: true
-   //});
-  // this._db = levelup(memdown())
-  var _this =  this;
-  // this._db.createKeyStream().pipe(_this._db.createDeleteStream()).on('end', cb)
+    }, clean: true, compression: true
+   });
+  }
+  else{
+    this._db = levelup(encode(leveldown(DB_PATH), {
+      keyEncoding: {
+        type: 'lexicographic-integer',
+        encode: (n) => lexint.pack(n, 'hex'),
+        decode: lexint.unpack,
+        buffer: false
+      }
+    },), {compression: true, cacheSize: 32*1024*1024} );
+  }
 }
 
 GridDB.createColInfo = function(colInfo, colCount) {
@@ -83,6 +84,7 @@ GridDB.getByCellName = async function(cellName){
 GridDB.insertRows = function(rowdatas){
   var row_index = 0;
   var colname = 0;
+  var colIndex = 0;
   var batch = this._db.batch();
 
   for(row_index in rowdatas){
@@ -90,9 +92,8 @@ GridDB.insertRows = function(rowdatas){
     var rowNum = this._curRowIndex;
     this._curRowIndex++;
     var colNum = 0;
-    for(colname in rowdata){
-      if(colname == "ID") continue;
-      var value = rowdata[colname];
+    for(colIndex in rowdata){
+      var value = rowdata[colIndex];
       var dbNum = this.grid2index(rowNum, colNum);
       batch = batch.put(dbNum, value);
       colNum++;
@@ -101,7 +102,7 @@ GridDB.insertRows = function(rowdatas){
   
   this._batchRemainCounter ++;
   var _this = this;
-  batch.write(function () { _this._doneCheck(); })
+  batch.write();//function () { _this._doneCheck(); })
 }
 
 GridDB.getRowsDict = function(rowStart, rowEnd, callback){

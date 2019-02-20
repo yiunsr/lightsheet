@@ -9,7 +9,6 @@ function loadFile(filepath){
   
   var curLine = 0;
   var totalLine = 0;
-  var rowdata = [];
 
   // GridDB.initDB();
   loadingModal("start", "loading file ...", "count line");
@@ -38,6 +37,7 @@ function _readFile(filepath, totalLine){
   // var rowdata = new Array(totalLine);
   var lastPercent = 0;
   var rowIndex = 0;
+  var splitChar = ",";
 
   console.log('_readFile start');
 
@@ -47,6 +47,13 @@ function _readFile(filepath, totalLine){
     .on('line', function(line) {
       curLine++;
       rowIndex++;
+
+      if(curLine == 1){
+        colCount = line.split(",").length;
+        var colInfo = getColInfos(colCount);
+        GridDB.createColInfo(colInfo, colCount);
+      }
+
       var curPercent = parseInt(curLine / totalLine * 100);
       if(lastPercent != curPercent){
         var data = {api: "_readFile", action: "percent", param: {percent:curPercent}}
@@ -57,20 +64,19 @@ function _readFile(filepath, totalLine){
       }
       
       lastPercent = curPercent
+      var items = line.split(splitChar);
 
-      var items = line.split(",");
-      colCount = items.length;
       var index = 0;
-      var rowItem = {id: curLine};
-      for(index=0; index < colCount ; index++ ){
+      // var rowItem = {id: curLine};
+      var rowItem = Array(colCount+1)
+      rowItem[0] = curLine;
+      for(index=0; index < colCount; index++ ){
         var colname = getColName(index+1);
-        rowItem[colname] = items[index];
+        // rowItem[index] = items[index];
+        // rowItem.push(items[index])
+        rowItem[index+1] = items[index];
       }
       
-      if(curLine == 1){
-        var colInfo = getColInfos(colCount);
-        GridDB.createColInfo(colInfo, colCount);
-      }
       // rowdata[curLine - 1] = rowItem;
       rowsBuffer.push(rowItem)
       if(curLine % BUFFER_SIZE ==0 ){
