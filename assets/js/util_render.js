@@ -1,7 +1,3 @@
-var fs = require('fs');
-var stream = require('stream');
-var readline = require('readline')
-
 
 // http://cwestblog.com/2013/09/05/javascript-snippet-convert-number-to-column-name/
 var __colNameList = [];

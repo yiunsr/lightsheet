@@ -1,3 +1,9 @@
+var fs = require('fs');
+var stream = require('stream');
+var readline = require('readline')
+const split = require('binary-split')
+
+
 var _grid;
 var _loader;
 var _headerMenuPlugin;
@@ -14,17 +20,18 @@ function loadFile(filepath){
   loadingModal("start", "loading file ...", "count line");
 
   // https://coderwall.com/p/ohjerg/read-large-text-files-in-nodejs
+  // var instream = fs.createReadStream(filepath);
+  // var outstream = new stream;
   var instream = fs.createReadStream(filepath);
-  var outstream = new stream;
-  readline.createInterface(instream, outstream)
-    .on('line', function(line) {
-      totalLine++;
-    })
-    .on('close', function() {
-      var spend_time = ((new Date)-__loading_time) / 1000;
-	    console.log("_readFile count line done : " + spend_time);
-      _readFile(filepath, totalLine);
-    });
+  instream.pipe(split("\n"))
+  .on('data', function(line) {
+    totalLine++;
+  })
+  .on('end', function() {
+    var spend_time = ((new Date)-__loading_time) / 1000;
+    console.log("_readFile count line done : " + spend_time);
+    _readFile(filepath, totalLine);
+  });
 
 }
 

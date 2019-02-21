@@ -5,6 +5,7 @@ const leveldown = require('leveldown')
 const encode = require('encoding-down')
 const lexint = require('lexicographic-integer')
 const memdown = require('memdown')
+const _ = require('lodash');
 
 const MAX_COL = 16384;
 const DB_PATH = './db_nosql.db';
@@ -21,28 +22,34 @@ GridDB.getColCount = function(){
   return this._colCount;
 }
 
-GridDB._save_mod = "m"
+GridDB._save_mod = "h" // "m" : memory, "h" : hard
+GridDB._save_block = "row" // "cell" , "row"
 
 GridDB.initDB = function (){
   if(this._save_mod == "m"){
-    this._db = levelup(memdown(), {
-    keyEncoding: {
-      type: 'lexicographic-integer',
-      encode: (n) => lexint.pack(n, 'hex'),
-      decode: lexint.unpack,
-      buffer: false
-    }, clean: true, compression: true
-   });
+    this._db = levelup(encode(memdown(), {
+      keyEncoding: {
+        type: 'lexicographic-integer',
+        encode: (n) => lexint.pack(n, 'hex'),
+        decode: lexint.unpack,
+        buffer: false
+      },
+      valueEncoding: 'json'
+   }), {clean: true, compression: true});
   }
-  else{
+  else if(this._save_mod == "h"){
     this._db = levelup(encode(leveldown(DB_PATH), {
       keyEncoding: {
         type: 'lexicographic-integer',
         encode: (n) => lexint.pack(n, 'hex'),
         decode: lexint.unpack,
         buffer: false
-      }
+      },
+      valueEncoding: 'json'
     },), {compression: true, cacheSize: 32*1024*1024} );
+  }
+  else{
+    this._db = levelup(memdown(), {clean: true, compression: true});
   }
 }
 
@@ -86,46 +93,71 @@ GridDB.insertRows = function(rowdatas){
   var colname = 0;
   var colIndex = 0;
   var batch = this._db.batch();
+  // var rowBuffers = [];
+  var batchBuffer = [];
 
   for(row_index in rowdatas){
     var rowdata = rowdatas[row_index];
     var rowNum = this._curRowIndex;
     this._curRowIndex++;
     var colNum = 0;
-    for(colIndex in rowdata){
-      var value = rowdata[colIndex];
-      var dbNum = this.grid2index(rowNum, colNum);
-      batch = batch.put(dbNum, value);
-      colNum++;
+
+    if(this._save_block == "cell"){
+      for(colIndex in rowdata){
+        var value = rowdata[colIndex];
+        var dbNum = this.grid2index(rowNum, colNum);
+        batch = batch.put(dbNum, value);
+        colNum++;
+      }  
+    }
+    else if(this._save_block == "row"){
+      batch = batch.put(this._curRowIndex, rowdata);      
     }
   }
   
   this._batchRemainCounter ++;
   var _this = this;
+  
   batch.write();//function () { _this._doneCheck(); })
 }
 
 GridDB.getRowsDict = function(rowStart, rowEnd, callback){
   var rowIndex = 0;
   var colIndex = 0;
-  var dbIndexStart = this.grid2index(rowStart, 0);
-  var dbIndexEnd = this.grid2index(rowEnd, MAX_COL);
+  if(this._save_block == "cell"){
+    var dbIndexStart = this.grid2index(rowStart, 0);
+    var dbIndexEnd = this.grid2index(rowEnd, MAX_COL);
+  }
+  else if(_save_block = "row"){
+    var dbIndexStart = rowStart;
+    var dbIndexEnd = rowEnd;
+  }
   
   var rowDicts = {};
   var curRowIndex = -1;
   var _this = this;
+  var colNames = getColNames().slice(0, this._colCount);
+  colNames.unshift("id");
+
   //if(this._db_rs)
   //  this._db_rs.destroy();
   this._db_rs = this._db.createReadStream({gte: dbIndexStart, lte: dbIndexEnd})
   .on('data', function (data) {
-    [rowIndex, colIndex] = _this.index2grid(data.key);
-    if(colIndex ==0){
-      curRowIndex ++;
-      rowDicts[curRowIndex] = {"id": parseInt(rowIndex) + 1};
+    if(_this._save_block == "cell"){
+      [rowIndex, colIndex] = _this.index2grid(data.key);
+      if(colIndex ==0){
+        curRowIndex ++;
+        rowDicts[curRowIndex] = {"id": parseInt(rowIndex) + 1};
+      }
+      else{
+        var colName = getColName(colIndex);
+        rowDicts[curRowIndex][colName] = data.value;
+      }
     }
-    else{
-      var colName = getColName(colIndex);
-      rowDicts[curRowIndex][colName] = data.value;
+    else if(_this._save_block == "row"){
+      curRowIndex++;
+      rowDicts[curRowIndex] = _.zipObject(colNames, data.value);
+      
     }
   })
   .on('error', function (err) {
