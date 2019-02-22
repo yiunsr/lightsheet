@@ -23,7 +23,6 @@ GridDB.getColCount = function(){
 }
 
 GridDB._save_mod = "h" // "m" : memory, "h" : hard
-GridDB._save_block = "row" // "cell" , "row"
 
 GridDB.initDB = function (){
   if(this._save_mod == "m"){
@@ -46,7 +45,7 @@ GridDB.initDB = function (){
         buffer: false
       },
       valueEncoding: 'json'
-    },), {compression: true, cacheSize: 32*1024*1024} );
+    },), {compression: true, cacheSize: 64*1024*1024, writeBufferSize: 256*1024*1024} );
   }
   else{
     this._db = levelup(memdown(), {clean: true, compression: true});
@@ -100,19 +99,7 @@ GridDB.insertRows = function(rowdatas){
     var rowdata = rowdatas[row_index];
     var rowNum = this._curRowIndex;
     this._curRowIndex++;
-    var colNum = 0;
-
-    if(this._save_block == "cell"){
-      for(colIndex in rowdata){
-        var value = rowdata[colIndex];
-        var dbNum = this.grid2index(rowNum, colNum);
-        batch = batch.put(dbNum, value);
-        colNum++;
-      }  
-    }
-    else if(this._save_block == "row"){
-      batch = batch.put(this._curRowIndex, rowdata);      
-    }
+    batch = batch.put(this._curRowIndex, rowdata);      
   }
   
   this._batchRemainCounter ++;
@@ -124,14 +111,9 @@ GridDB.insertRows = function(rowdatas){
 GridDB.getRowsDict = function(rowStart, rowEnd, callback){
   var rowIndex = 0;
   var colIndex = 0;
-  if(this._save_block == "cell"){
-    var dbIndexStart = this.grid2index(rowStart, 0);
-    var dbIndexEnd = this.grid2index(rowEnd, MAX_COL);
-  }
-  else if(_save_block = "row"){
-    var dbIndexStart = rowStart;
-    var dbIndexEnd = rowEnd;
-  }
+  
+  var dbIndexStart = rowStart;
+  var dbIndexEnd = rowEnd;
   
   var rowDicts = {};
   var curRowIndex = -1;
@@ -143,22 +125,8 @@ GridDB.getRowsDict = function(rowStart, rowEnd, callback){
   //  this._db_rs.destroy();
   this._db_rs = this._db.createReadStream({gte: dbIndexStart, lte: dbIndexEnd})
   .on('data', function (data) {
-    if(_this._save_block == "cell"){
-      [rowIndex, colIndex] = _this.index2grid(data.key);
-      if(colIndex ==0){
-        curRowIndex ++;
-        rowDicts[curRowIndex] = {"id": parseInt(rowIndex) + 1};
-      }
-      else{
-        var colName = getColName(colIndex);
-        rowDicts[curRowIndex][colName] = data.value;
-      }
-    }
-    else if(_this._save_block == "row"){
       curRowIndex++;
       rowDicts[curRowIndex] = _.zipObject(colNames, data.value);
-      
-    }
   })
   .on('error', function (err) {
     console.log('Oh my!', err)
