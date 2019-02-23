@@ -1,119 +1,7 @@
-var fs = require('fs');
-var stream = require('stream');
-var readline = require('readline')
-const split = require('binary-split')
-
-
 var _grid;
 var _loader;
 var _headerMenuPlugin;
 const BUFFER_SIZE = 10000;
-
-var __loading_time;
-function loadFile(filepath){
-  __loading_time = new Date();
-  
-  var curLine = 0;
-  var totalLine = 0;
-
-  // GridDB.initDB();
-  loadingModal("start", "loading file ...", "count line");
-
-  // https://coderwall.com/p/ohjerg/read-large-text-files-in-nodejs
-  // var instream = fs.createReadStream(filepath);
-  // var outstream = new stream;
-  var instream = fs.createReadStream(filepath);
-  instream.pipe(split("\n"))
-  .on('data', function(line) {
-    totalLine++;
-  })
-  .on('end', function() {
-    var spend_time = ((new Date)-__loading_time) / 1000;
-    console.log("_readFile count line done : " + spend_time);
-    // _readFile(filepath, totalLine);
-    GridDB.readCvsFile(filepath, totalLine, __loading_time)
-  });
-
-}
-
-function _readFile(filepath, totalLine){
-  var curLine = 0;
-  var rowCount = totalLine;
-  var colCount = 0;
-  // var rowdata = [];
-  var rowsBuffer = [];
-  // var rowdata = new Array(totalLine);
-  var lastPercent = 0;
-  var rowIndex = 0;
-  var splitChar = ",";
-
-  console.log('_readFile start');
-
-  var instream = fs.createReadStream(filepath);
-  var outstream = new stream;
-  readline.createInterface(instream, outstream)
-    .on('line', function(line) {
-      curLine++;
-      rowIndex++;
-
-      if(curLine == 1){
-        colCount = line.split(",").length;
-        var colInfo = getColInfos(colCount);
-        GridDB.createColInfo(colInfo, colCount);
-      }
-
-      var curPercent = parseInt(curLine / totalLine * 100);
-      if(lastPercent != curPercent){
-        var data = {api: "_readFile", action: "percent", param: {percent:curPercent}}
-        var spend_time = ((new Date)-__loading_time) / 1000;
-        console.log("_readFile percent : " + curPercent + "%, Second : " + spend_time );
-        // sendRenderAPI(data);
-        loadingModal(curPercent, "loading file ...");
-      }
-      
-      lastPercent = curPercent
-      var items = line.split(splitChar);
-
-      var index = 0;
-      // var rowItem = {id: curLine};
-      var rowItem = Array(colCount+1)
-      rowItem[0] = curLine;
-      for(index=0; index < colCount; index++ ){
-        var colname = getColName(index+1);
-        // rowItem[index] = items[index];
-        // rowItem.push(items[index])
-        rowItem[index+1] = items[index];
-      }
-      
-      // rowdata[curLine - 1] = rowItem;
-      rowsBuffer.push(rowItem)
-      if(curLine % BUFFER_SIZE ==0 ){
-        GridDB.insertRows(rowsBuffer);
-        rowsBuffer = [];
-      }
-      
-    })
-    .on('error', function(err) {
-      console.log('Error while reading file.', err);
-    })
-    .on('close', function() {
-      console.log('_readFile end');
-
-      var spend_time = ((new Date)-__loading_time) / 1000;
-      console.log("_readFile prepare data done: " + spend_time);
-
-      // sendRenderAPI(data);
-      if(rowsBuffer.length > 0){
-        GridDB.insertRows(rowsBuffer);
-      }
-      loadGrid(rowCount, colCount);
-      loadingModal("end");
-      console.log("_readFile end: " + spend_time);
-    });
-
-
-}
-
 
 function _initColHeader(columns){
   for (var i = 0; i < columns.length; i++) {
@@ -242,7 +130,8 @@ function loadGrid(rowCount, colCount){
 function initGrid(){
   var filepath = getUrlParam("filepath");
   titleChange(filepath);
-  loadFile(filepath);
+  // loadFile(filepath);
+  GridDB.loadFile(filepath);
 }
   
 

@@ -5,8 +5,11 @@ const lexint = require('lexicographic-integer')
 const memdown = require('memdown')
 
 var byteStream = require('byte-stream')
-var bsplit = require('binary-split')
+var split = require('binary-split')
 var fs = require('fs')
+var chardet = require('chardet');
+var Iconv  = require('iconv').Iconv;
+
 
 const _ = require('lodash');
 
@@ -90,33 +93,62 @@ GridDB.getByCellName = async function(cellName){
   return value;
 }
 
+GridDB.loadFile = function(filepath){
+  var __loading_time= new Date();
+  
+  var curLine = 0;
+  var totalLine = 0;
+
+  // GridDB.initDB();
+  loadingModal("start", "loading file ...", "count line");
+  const stats = fs.statSync(filepath);
+  detInfo = chardet.detectFileSync(filepath,  { sampleSize: 1024 });
+  GridDB.readCvsFile(filepath, detInfo , stats.size, __loading_time);
+
+}
+
+
 // https://gist.github.com/maxogden/6551333
-GridDB.readCvsFile = function(csvFile, totalLine, startTime){
+GridDB.readCvsFile = function(csvFile, charEncoding, totalSize, startTime){
   var rowIndex = 1;
-  var batcher = byteStream(this.wbs_size)
+  var curSize = 0;
+  var batch_size = this.wbs_size;
+  var batcher = byteStream(batch_size);
   var _this = this;
   var lastPercent = 0;
   var curPercent = 0;
   var colCount = 0;
 
   // GridDB.initDB();
+  var iconv = new Iconv(charEncoding, "utf-8");
   fs.createReadStream(csvFile)
-    .pipe(bsplit("\n"))
+    .pipe(split("\n"))
     .pipe(batcher)
     .on('data', function(lines) {
 
       if(rowIndex == 1){
-        colCount = lines[0].utf8Slice().split(",").length;
+        colCount = iconv.convert(lines[0]).utf8Slice().split(",").length;
         var colInfo = getColInfos(colCount);
         GridDB.createColInfo(colInfo, colCount);
       }
 
       var batch = _this._db.batch();
       for (var i = 0; i < lines.length; i++) {
-        batch.put(rowIndex, lines[i])
+        var utfstring
+        try{
+          utfstring = iconv.convert(lines[i]).utf8Slice();
+        }
+        catch (e) {
+          console.log(e);
+          utfstring = "#Error"
+        }
+        var items = utfstring.split(",")
+        batch.put(rowIndex, items)
+        // batch.put(rowIndex, lines[i])
         rowIndex++
       }
-      curPercent = parseInt(rowIndex/totalLine * 100);
+      curSize += batch_size;
+      curPercent = parseInt(curSize/totalSize * 100);
       if(curPercent!=lastPercent){
         lastPercent = curPercent;
         var data = {api: "_readFile", action: "percent", param: {percent:curPercent}}
@@ -173,8 +205,6 @@ GridDB.getRowsDict = function(rowStart, rowEnd, callback){
   var colNames = getColNames().slice(0, this._colCount);
   colNames.unshift("id");
 
-  //if(this._db_rs)
-  //  this._db_rs.destroy();
   this._db_rs = this._db.createReadStream({gte: dbIndexStart, lte: dbIndexEnd})
   .on('data', function (data) {
       curRowIndex++;
