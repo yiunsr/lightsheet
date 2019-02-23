@@ -1,10 +1,13 @@
-var fs = require('fs');
-
 const levelup = require('levelup')
 const leveldown = require('leveldown')
 const encode = require('encoding-down')
 const lexint = require('lexicographic-integer')
 const memdown = require('memdown')
+
+var byteStream = require('byte-stream')
+var bsplit = require('binary-split')
+var fs = require('fs')
+
 const _ = require('lodash');
 
 const MAX_COL = 16384;
@@ -17,6 +20,7 @@ GridDB._colCount = undefined;
 GridDB._batch = undefined;
 GridDB._curRowIndex = 0;
 GridDB._db_rs = undefined;
+GridDB.wbs_size = 1024 * 1024 * 64
 
 GridDB.getColCount = function(){
   return this._colCount;
@@ -33,7 +37,7 @@ GridDB.initDB = function (){
         decode: lexint.unpack,
         buffer: false
       },
-      valueEncoding: 'json'
+      // valueEncoding: 'json'
    }), {clean: true, compression: true});
   }
   else if(this._save_mod == "h"){
@@ -44,8 +48,8 @@ GridDB.initDB = function (){
         decode: lexint.unpack,
         buffer: false
       },
-      valueEncoding: 'json'
-    },), {compression: true, cacheSize: 64*1024*1024, writeBufferSize: 256*1024*1024} );
+      // valueEncoding: 'json'
+    },), {compression: true, cacheSize: 64*1024*1024, writeBufferSize: this.wbs_size} );
   }
   else{
     this._db = levelup(memdown(), {clean: true, compression: true});
@@ -84,6 +88,54 @@ GridDB.getByCellName = async function(cellName){
   var value = await this._db.get(dbNum);
   console.log(value);
   return value;
+}
+
+// https://gist.github.com/maxogden/6551333
+GridDB.readCvsFile = function(csvFile, totalLine, startTime){
+  var rowIndex = 1;
+  var batcher = byteStream(this.wbs_size)
+  var _this = this;
+  var lastPercent = 0;
+  var curPercent = 0;
+  var colCount = 0;
+
+  // GridDB.initDB();
+  fs.createReadStream(csvFile)
+    .pipe(bsplit("\n"))
+    .pipe(batcher)
+    .on('data', function(lines) {
+
+      if(rowIndex == 1){
+        colCount = lines[0].utf8Slice().split(",").length;
+        var colInfo = getColInfos(colCount);
+        GridDB.createColInfo(colInfo, colCount);
+      }
+
+      var batch = _this._db.batch();
+      for (var i = 0; i < lines.length; i++) {
+        batch.put(rowIndex, lines[i])
+        rowIndex++
+      }
+      curPercent = parseInt(rowIndex/totalLine * 100);
+      if(curPercent!=lastPercent){
+        lastPercent = curPercent;
+        var data = {api: "_readFile", action: "percent", param: {percent:curPercent}}
+        var spend_time = ((new Date)-startTime) / 1000;
+        console.log("_readFile percent : " + curPercent + "%, Second : " + spend_time );
+        // sendRenderAPI(data);
+        loadingModal(curPercent, "loading file ...");
+      }
+
+      batch.write()
+  }).
+  on('end', function() {
+    var spend_time = ((new Date)-startTime) / 1000;
+    console.log("_readFile end: " + spend_time);
+    loadingModal("end");
+
+    loadGrid(rowIndex, colCount);
+      
+  });
 }
 
 
@@ -126,7 +178,9 @@ GridDB.getRowsDict = function(rowStart, rowEnd, callback){
   this._db_rs = this._db.createReadStream({gte: dbIndexStart, lte: dbIndexEnd})
   .on('data', function (data) {
       curRowIndex++;
-      rowDicts[curRowIndex] = _.zipObject(colNames, data.value);
+      var values = data.value.split(",");
+      values.unshift(data.key)
+      rowDicts[curRowIndex] = _.zipObject(colNames, values);
   })
   .on('error', function (err) {
     console.log('Oh my!', err)

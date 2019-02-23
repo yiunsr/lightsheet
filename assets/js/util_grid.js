@@ -30,7 +30,8 @@ function loadFile(filepath){
   .on('end', function() {
     var spend_time = ((new Date)-__loading_time) / 1000;
     console.log("_readFile count line done : " + spend_time);
-    _readFile(filepath, totalLine);
+    // _readFile(filepath, totalLine);
+    GridDB.readCvsFile(filepath, totalLine, __loading_time)
   });
 
 }
@@ -240,6 +241,7 @@ function loadGrid(rowCount, colCount){
 
 function initGrid(){
   var filepath = getUrlParam("filepath");
+  titleChange(filepath);
   loadFile(filepath);
 }
   

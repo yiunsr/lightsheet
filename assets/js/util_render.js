@@ -1,4 +1,5 @@
 
+
 // http://cwestblog.com/2013/09/05/javascript-snippet-convert-number-to-column-name/
 var __colNameList = [];
 var __maxColCount = 16384;
@@ -62,4 +63,9 @@ function apiReceiver(data){
     default:break;
   }
 
+}
+
+
+function titleChange(title){
+  document.title = title;
 }

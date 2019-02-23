@@ -22,6 +22,7 @@
   "dependencies": {
     "binary-split": "^1.0.5",
     "bootstrap": "^4.2.1",
+    "byte-stream": "^2.1.0",
     "encoding-down": "^6.0.1",
     "excel-formula": "github:yiunsr/excelFormulaUtilitiesJS",
     "formulajs": "github:sutoiku/formula.js",
