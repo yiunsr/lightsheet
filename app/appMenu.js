@@ -26,7 +26,7 @@ const template = [
               }
           },
           {
-              label: 'Save', 
+              label: 'Export CSV', 
               click () { 
                   require('electron').shell.openExternal('https://electronjs.org') 
               }
@@ -70,6 +70,16 @@ const template = [
     submenu: [
       {label: 'Line..', click: function() {
         }
+      }
+    ]
+  },
+  {
+    label: 'Debug',
+    submenu: [
+      {label: 'Test01', click: function() {
+        var data = {api: "eval", action: "test", param: {eval:"test01();"}}
+        utils.sendRenderAPI(data);
+      }
       }
     ]
   },

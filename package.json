@@ -5,7 +5,7 @@
   "main": "app/main.js",
   "scripts": {
     "start": "electron .",
-    "rebuild": "electron-rebuild -f -w leveldown",
+    "rebuild": "electron-rebuild",
     "electron-rebuild": "electron-rebuild"
   },
   "repository": "https://github.com/electron/electron-quick-start",
@@ -24,6 +24,7 @@
     "bootstrap": "^4.2.1",
     "byte-stream": "^2.1.0",
     "chardet": "github:runk/node-chardet",
+    "csvtojson": "github:Keyang/node-csvtojson",
     "encoding-down": "^6.0.1",
     "excel-formula": "github:yiunsr/excelFormulaUtilitiesJS",
     "formulajs": "github:sutoiku/formula.js",
@@ -32,8 +33,10 @@
     "levelup": "^4.0.0",
     "lexicographic-integer": "^1.1.0",
     "lodash": "^4.17.11",
+    "lokijs": "github:techfort/LokiJS",
     "memdown": "^3.0.0",
     "slickgrid": "^2.4.2",
+    "unzip-stream": "^0.3.0",
     "zlib": "^1.0.5"
   }
 }

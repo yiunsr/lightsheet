@@ -60,6 +60,10 @@ function apiReceiver(data){
 
   switch(api){
     case "loadFile": loadFile(action, param);break;
+    case "eval": 
+      var eval_str = param["eval"];
+      eval(eval_str);
+      break;
     default:break;
   }
 
@@ -68,4 +72,15 @@ function apiReceiver(data){
 
 function titleChange(title){
   document.title = title;
+}
+
+function test01(){
+  var rowStart = 0;
+  var rowEnd = GridDB.getRowCount();
+  var startTime = new Date();
+  console.log("test01 start");
+  GridDB.getRowsDict(rowStart, rowEnd, function(){
+    var spend_time = ((new Date)-startTime) / 1000;
+    console.log("_readFile end: " + spend_time);
+  }, true);
 }

@@ -4,29 +4,35 @@ const encode = require('encoding-down')
 const lexint = require('lexicographic-integer')
 const memdown = require('memdown')
 
-var byteStream = require('byte-stream')
-var split = require('binary-split')
-var fs = require('fs')
-var chardet = require('chardet');
-var Iconv  = require('iconv').Iconv;
+const byteStream = require('byte-stream')
+const split = require('binary-split')
+const fs = require('fs')
+const chardet = require('chardet');
+const Iconv  = require('iconv').Iconv;
 
-
+const csvtojson=require("csvtojson");
 const _ = require('lodash');
 
 const MAX_COL = 16384;
+//const DB_PATH = './db_nosql.db';
 const DB_PATH = './db_nosql.db';
+//const DB_PATH = 'C:/Temp/db_nosql.db';
 
 var GridDB = new Object();
 GridDB._db = undefined;
 GridDB._colInfo = undefined;
 GridDB._colCount = undefined;
+GridDB._rowCount = undefined;
 GridDB._batch = undefined;
 GridDB._curRowIndex = 0;
 GridDB._db_rs = undefined;
-GridDB.wbs_size = 1024 * 1024 * 64
+GridDB.wbs_size = 1024 * 1024 * 16
 
 GridDB.getColCount = function(){
   return this._colCount;
+}
+GridDB.getRowCount = function(){
+  return this._rowCount;
 }
 
 GridDB._save_mod = "h" // "m" : memory, "h" : hard
@@ -52,11 +58,9 @@ GridDB.initDB = function (){
         buffer: false
       },
       // valueEncoding: 'json'
-    },), {compression: true, cacheSize: 64*1024*1024, writeBufferSize: this.wbs_size} );
+    },), {compression: true, cacheSize: 32*1024*1024, writeBufferSize: this.wbs_size} );
   }
-  else{
-    this._db = levelup(memdown(), {clean: true, compression: true});
-  }
+  
 }
 
 GridDB.createColInfo = function(colInfo, colCount) {
@@ -102,14 +106,32 @@ GridDB.loadFile = function(filepath){
   // GridDB.initDB();
   loadingModal("start", "loading file ...", "count line");
   const stats = fs.statSync(filepath);
-  detInfo = chardet.detectFileSync(filepath,  { sampleSize: 1024 });
-  GridDB.readCvsFile(filepath, detInfo , stats.size, __loading_time);
+  // detInfo = chardet.detectFileSync(filepath,  { sampleSize: 1024 });
+  var firstBuffer = new Buffer(16*1024);
+  fd= fs.openSync(filepath,'r');
+  fs.readSync(fd, firstBuffer, 0, 16*1024);
+  detInfo = chardet.detect(firstBuffer);
+  if(detInfo != "UTF-8"){
+    var iconv = new Iconv(detInfo, "utf-8//IGNORE");
+    firstBuffer = iconv.convert(firstBuffer);
+  }
+  firstBuffer = firstBuffer.utf8Slice()
+  fs.close(fd, function(){
 
+  });
+  delimiter1 = firstBuffer.split(",").length - 1;
+  delimiter2 = firstBuffer.split("|").length - 1;
+  if(delimiter1 >= delimiter2)
+    delimiter = ","
+  else
+    delimiter = "|"
+  GridDB.readCvsFile(filepath, detInfo , stats.size, __loading_time,"\n", delimiter);
+  // GridDB.readCvsFile2(filepath, detInfo , stats.size, __loading_time,"\n", delimiter);
 }
 
 
 // https://gist.github.com/maxogden/6551333
-GridDB.readCvsFile = function(csvFile, charEncoding, totalSize, startTime){
+GridDB.readCvsFile = function(csvFile, charEncoding, totalSize, startTime, linedelimiter, cdelimiter){
   var rowIndex = 1;
   var curSize = 0;
   var batch_size = this.wbs_size;
@@ -118,36 +140,57 @@ GridDB.readCvsFile = function(csvFile, charEncoding, totalSize, startTime){
   var lastPercent = 0;
   var curPercent = 0;
   var colCount = 0;
+  var items = [];
 
   // GridDB.initDB();
-  var iconv = new Iconv(charEncoding, "utf-8");
-  fs.createReadStream(csvFile)
-    .pipe(split("\n"))
+  var iconv = new Iconv(charEncoding, "utf-8//IGNORE");
+  var fileStream = fs.createReadStream(csvFile, { highWaterMark:  4 * 1024 * 1024 });
+  fileStream = fileStream
+    .on('data', function(data) {
+      curSize += data.length;
+    });
+  if(charEncoding != "UTF-8")
+    fileStream = fileStream.pipe(iconv);
+  fileStream
+    //.pipe(csvtojson({noheader:true, output: "csv", delimiter:cdelimiter}))
+    .pipe(split(linedelimiter))
     .pipe(batcher)
     .on('data', function(lines) {
-
       if(rowIndex == 1){
-        colCount = iconv.convert(lines[0]).utf8Slice().split(",").length;
+        //colCount = JSON.parse(lines[0]).length;
+        colCount = lines[0].utf8Slice().split(cdelimiter).length;
         var colInfo = getColInfos(colCount);
         GridDB.createColInfo(colInfo, colCount);
       }
 
       var batch = _this._db.batch();
       for (var i = 0; i < lines.length; i++) {
-        var utfstring
         try{
-          utfstring = iconv.convert(lines[i]).utf8Slice();
+          var items = [];
+          var line = lines[i].utf8Slice();
+          if(line[line.length-1].charCodeAt() == 13)
+            line=line.slice(0, -1)
+          var lineItems = line.split(cdelimiter);
+          for(var j = 0; j < lineItems.length ; j++){
+            var colvalue = lineItems[j];
+            if(colvalue[0] == '"' & colvalue[colvalue.length-1] == '"'){
+              items.push( colvalue.slice(1, colvalue.length -1) );
+            }
+            else{
+              items.push(colvalue);
+            }
+          }
+          items = '["'+ items.join('","') + '"]';
         }
         catch (e) {
           console.log(e);
-          utfstring = "#Error"
+          items = '["#Error"]';
         }
-        var items = utfstring.split(",")
+        // var items = utfstring.split(",")
         batch.put(rowIndex, items)
         // batch.put(rowIndex, lines[i])
         rowIndex++
       }
-      curSize += batch_size;
       curPercent = parseInt(curSize/totalSize * 100);
       if(curPercent!=lastPercent){
         lastPercent = curPercent;
@@ -163,13 +206,14 @@ GridDB.readCvsFile = function(csvFile, charEncoding, totalSize, startTime){
   on('end', function() {
     var spend_time = ((new Date)-startTime) / 1000;
     console.log("_readFile end: " + spend_time);
+    var heaptotal = process.memoryUsage()["heapTotal"] / (1024 * 1024 * 1024)
+    console.log("heaptotal: " + heaptotal);
     loadingModal("end");
 
     loadGrid(rowIndex, colCount);
-      
+    _this._rowCount = rowIndex;
   });
 }
-
 
 GridDB.insertRows = function(rowdatas){
   var row_index = 0;
@@ -192,9 +236,12 @@ GridDB.insertRows = function(rowdatas){
   batch.write();//function () { _this._doneCheck(); })
 }
 
-GridDB.getRowsDict = function(rowStart, rowEnd, callback){
+GridDB.getRowsDict = function(rowStart, rowEnd, callback, logmode){
+  if(logmode === undefined)
+    logmode = false;
   var rowIndex = 0;
   var colIndex = 0;
+  var lastPercent = 0;
   
   var dbIndexStart = rowStart;
   var dbIndexEnd = rowEnd;
@@ -208,9 +255,17 @@ GridDB.getRowsDict = function(rowStart, rowEnd, callback){
   this._db_rs = this._db.createReadStream({gte: dbIndexStart, lte: dbIndexEnd})
   .on('data', function (data) {
       curRowIndex++;
-      var values = data.value.split(",");
+      // var values = JSON.parse(data.value);var values = JSON.parse(data.value);
+      var values = data.value.slice(2,-2).split('","');
       values.unshift(data.key)
       rowDicts[curRowIndex] = _.zipObject(colNames, values);
+      if(logmode){
+        curPercent = parseInt(curRowIndex / ( rowEnd - rowStart) * 100);
+        if(curPercent != lastPercent){
+          console.log("getRowsDict percent : " + curPercent);
+          lastPercent = curPercent;
+        }
+      }
   })
   .on('error', function (err) {
     console.log('Oh my!', err)
@@ -225,6 +280,11 @@ GridDB.getRowsDict = function(rowStart, rowEnd, callback){
   })
   
 }
+
+
+// GridDB.csvtojson = function(data, rowChar, colChar){
+//   var lineCount 
+// }
 
 // https://geedew.com/remove-a-directory-that-is-not-empty-in-nodejs/
 var deleteFolderRecursive = function(path) {
